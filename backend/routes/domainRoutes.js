@@ -1,6 +1,6 @@
 import express from "express";
 // import { protect } from "../../middleware/authMiddleware.js";
-import {uploadFile} from "../../controllers//domainController.js";
+// import {uploadFile} from "../../controllers//domainController.js";
 import {domainCountry} from "../controllers/domainController.js";
 import {extractEmail} from "../controllers/domainController.js";
 import {validateEmail} from "../controllers/domainController.js";
