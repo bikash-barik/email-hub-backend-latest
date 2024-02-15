@@ -1,11 +1,11 @@
 import dns from "dns";
 import geoip from "geoip-lite";
-import fs from 'fs';
-import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import puppeteer from 'puppeteer';
-import validator from 'email-validator';
+import fs from "fs";
+import multer from "multer";
+import path from "path";
+import { fileURLToPath } from "url";
+import puppeteer from "puppeteer";
+import validator from "email-validator";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,38 +13,43 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 const uploadFile = (req, res) => {
-    upload.single('domainList')(req, res, function (err) {
-        if (err) {
-            console.error(err);
-            return res.status(400).send("File upload error");
-        }
+  upload.single("domainList")(req, res, function (err) {
+    if (err) {
+      console.error(err);
+      return res.status(400).send("File upload error");
+    }
 
-        let domainList;
-        let domainListUploadPath;
+    let domainList;
+    let domainListUploadPath;
 
-        if (!req.file) {
-            console.log("No files were uploaded");
-            return res.status(400).send("No files were uploaded.");
-        }
+    if (!req.file) {
+      console.log("No files were uploaded");
+      return res.status(400).send("No files were uploaded.");
+    }
 
-        domainList = req.file;
-        domainListUploadPath = path.join(__dirname, 'uploads', domainList.originalname + '.csv');
-        fs.writeFileSync(domainListUploadPath, domainList.buffer.toString());
+    domainList = req.file;
+    domainListUploadPath = path.join(
+      __dirname,
+      "uploads",
+      domainList.originalname + ".csv"
+    );
+    fs.writeFileSync(domainListUploadPath, domainList.buffer.toString());
 
-        const domains = fs.readFileSync(domainListUploadPath, { encoding: "utf8" }).split("\n");
-        domains.shift();
-        domains.pop();
-        res.json({ domains });
-    });
+    const domains = fs
+      .readFileSync(domainListUploadPath, { encoding: "utf8" })
+      .split("\n");
+    domains.shift();
+    domains.pop();
+    res.json({ domains });
+  });
 };
 
-
-const domainCountry= (req, res) => {
-    upload.single('domainList')(req, res, function (err) {
-        if (err) {
-            console.error(err);
-            return res.status(400).send("File upload error");
-        }
+const domainCountry = (req, res) => {
+  upload.single("domainList")(req, res, function (err) {
+    if (err) {
+      console.error(err);
+      return res.status(400).send("File upload error");
+    }
     let domainList;
     let domainListUplaodPath;
     console.log("hI");
@@ -53,12 +58,16 @@ const domainCountry= (req, res) => {
       console.log("No files were uploaded");
       return res.status(400).send("No files were uploaded.");
     }
-    console.log("hI")
-    
+    console.log("hI");
+
     domainList = req.file;
-    domainListUplaodPath = path.join(__dirname, 'uploads', domainList.originalname);
+    domainListUplaodPath = path.join(
+      __dirname,
+      "uploads",
+      domainList.originalname
+    );
     fs.writeFileSync(domainListUplaodPath, domainList.buffer.toString());
-  
+
     const domains = fs
       .readFileSync(domainListUplaodPath, { encoding: "utf8" })
       .split("\n")
@@ -148,9 +157,9 @@ const domainCountry= (req, res) => {
       );
     domains.shift();
     domains.pop();
-  
+
     const results = [];
-  
+
     const lookupPromise = (domain) => {
       return new Promise((resolve, reject) => {
         dns.lookup(domain, (err, address) => {
@@ -167,7 +176,7 @@ const domainCountry= (req, res) => {
         });
       });
     };
-  
+
     Promise.all(domains.map((domain) => lookupPromise(domain.trim())))
       .then((results) => {
         res.json(results);
@@ -177,237 +186,243 @@ const domainCountry= (req, res) => {
         console.error(`Error verifying DNS: ${err}`);
         res.status(500).send("Internal server error");
       });
-    
-    });
-}
+  });
+};
 
 const extractEmail = async (req, res) => {
-    upload.single('domainList')(req, res, async function (err) {
-        if (err) {
-            console.error(err);
-            return res.status(400).send("File upload error");
-        }
+  upload.single("domainList")(req, res, async function (err) {
+    if (err) {
+      console.error(err);
+      return res.status(400).send("File upload error");
+    }
 
-        let domainList;
-        let domainListUploadPath;
+    let domainList;
+    let domainListUploadPath;
 
-        if (!req.file) {
-            console.log("No files were uploaded");
-            return res.status(400).send("No files were uploaded.");
-        }
+    if (!req.file) {
+      console.log("No files were uploaded");
+      return res.status(400).send("No files were uploaded.");
+    }
 
-        domainList = req.file;
-        domainListUploadPath = path.join(__dirname, 'uploads', domainList.originalname + '.csv');
-        fs.writeFileSync(domainListUploadPath, domainList.buffer.toString());
+    domainList = req.file;
+    domainListUploadPath = path.join(
+      __dirname,
+      "uploads",
+      domainList.originalname + ".csv"
+    );
+    fs.writeFileSync(domainListUploadPath, domainList.buffer.toString());
 
-        const domains = fs
-        .readFileSync(domainListUploadPath, { encoding: "utf8" })
-        .split("\n");
-      domains.shift();
-      domains.pop();
-      console.log(domains);
-      const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
-      const bannedWords = ["domain"];
-    
-      let emailAddresses = {};
-    
-      let numResponsesReceived = 0;
-      const numDomains = domains.length;
-    
-      const browser = await puppeteer.launch();
-      const page = await browser.newPage();
-    
-      for (let i = 0; i < numDomains; i++) {
-        const domain = domains[i];
-        console.log(domain);
-        const url = `https://${domain}`;
-    
-        try {
-          await page.goto(url);
-          const pages = await browser.pages();
-          for (let j = 0; j < pages.length; j++) {
-            const page = pages[j];
-            const pageUrl = page.url();
-            const matches = await page.$$eval(
-              "a[href]",
-              (links, bannedWords) =>
-                links
-                  .map((link) =>
-                    link.href.match(
-                      /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi
-                    )
+    const domains = fs
+      .readFileSync(domainListUploadPath, { encoding: "utf8" })
+      .split("\n");
+    domains.shift();
+    domains.pop();
+    console.log(domains);
+    const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
+    const bannedWords = ["domain"];
+
+    let emailAddresses = {};
+
+    let numResponsesReceived = 0;
+    const numDomains = domains.length;
+
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+
+    for (let i = 0; i < numDomains; i++) {
+      const domain = domains[i];
+      console.log(domain);
+      const url = `https://${domain}`;
+
+      try {
+        await page.goto(url);
+        const pages = await browser.pages();
+        for (let j = 0; j < pages.length; j++) {
+          const page = pages[j];
+          const pageUrl = page.url();
+          const matches = await page.$$eval(
+            "a[href]",
+            (links, bannedWords) =>
+              links
+                .map((link) =>
+                  link.href.match(
+                    /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi
                   )
-                  .filter((matches) => matches !== null)
-                  .flat()
-                  .filter((match, index, self) => self.indexOf(match) === index)
-                  .filter((match) => {
-                    for (let i = 0; i < bannedWords.length; i++) {
-                      if (match.includes(bannedWords[i])) {
-                        return false;
-                      }
+                )
+                .filter((matches) => matches !== null)
+                .flat()
+                .filter((match, index, self) => self.indexOf(match) === index)
+                .filter((match) => {
+                  for (let i = 0; i < bannedWords.length; i++) {
+                    if (match.includes(bannedWords[i])) {
+                      return false;
                     }
-                    return true;
-                  }),
-              bannedWords
-            );
-            if (matches && matches.length > 0) {
-              emailAddresses[pageUrl] = matches;
-            }
+                  }
+                  return true;
+                }),
+            bannedWords
+          );
+          if (matches && matches.length > 0) {
+            emailAddresses[pageUrl] = matches;
           }
-        } catch (error) {
-          console.error(error);
         }
-    
-        numResponsesReceived++;
-        if (numResponsesReceived === numDomains) {
-          await browser.close();
-          if (Object.keys(emailAddresses).length > 0) {
-            res.send(emailAddresses);
-            console.log(emailAddresses);
-          } else {
-            res.send("No email addresses found in the uploaded file.");
-          }
+      } catch (error) {
+        console.error(error);
+      }
+
+      numResponsesReceived++;
+      if (numResponsesReceived === numDomains) {
+        await browser.close();
+        if (Object.keys(emailAddresses).length > 0) {
+          res.send(emailAddresses);
+          console.log(emailAddresses);
+        } else {
+          res.send("No email addresses found in the uploaded file.");
         }
       }
-    });
+    }
+  });
 };
-
 
 const validateEmail = (req, res) => {
-    upload.single('emailList')(req, res, function (err) {
-        if (err) {
-            console.error(err);
-            return res.status(400).send("File upload error");
-        }
+  upload.single("emailList")(req, res, function (err) {
+    if (err) {
+      console.error(err);
+      return res.status(400).send("File upload error");
+    }
 
-        let emailList;
-        let emailListUplaodPath;
-      
-        if (!req.file) {
-          console.log("No files were uploaded");
-          return res.status(400).send("No files were uploaded.");
-        }
-      
-        emailList = req.file;
-        emailListUplaodPath = path.join(__dirname, 'uploads', emailList.originalname);
-        fs.writeFileSync(emailListUplaodPath, emailList.buffer.toString());
-      
-        const emails = fs
-          .readFileSync(emailListUplaodPath, { encoding: "utf8" })
-          .split("\n");
-        emails.shift();
-        emails.pop();
-      
-        const blacklist = [
-          "domain",
-          "Job",
-          "feedback",
-          "google",
-          "helpdesk",
-          "donate",
-          "booking",
-          "subscribe",
-          "postmaster",
-          "ticket",
-          "police",
-          "enquiries",
-          "privacy",
-          "example",
-          "name",
-          "email",
-          ".png",
-          ".jpeg",
-          ".jpg",
-          ".gif",
-          "reception",
-          "communication",
-          "community",
-          "register",
-          ".life",
-          "firstname",
-          "lastname",
-          "customer.",
-          "customercare",
-          "wecare",
-          "customerservice",
-          "CustomerAssistance",
-          "NDW@MSN.com",
-          "editor",
-          "frontdesk",
-          "massage@gmail.com",
-          ".expert",
-          "hi@",
-          ".mx",
-          "police",
-          "mail@",
-          "questions",
-          "exam",
-          "information",
-          "webcam",
-          "license",
-          ".io",
-          "Wixpress",
-          "police",
-          ".site",
-          ".to",
-          ".make",
-          ".xyz",
-          ".gcb",
-          "hello",
-          ".studio",
-          "registra",
-          "sentry",
-          "reservation",
-          "%",
-          "e-mail",
-          "financial",
-          "bank",
-          "credit",
-          "card",
-          "auto",
-          "www.",
-          "answer",
-          ".info",
-          "enquiry",
-          "press",
-          "student",
-          "news",
-          "camera",
-          "secretariat",
-          "contribute",
-          "donate",
-          "boxoffice",
-          ".js",
-          "president",
-          "inquiries",
-          "member",
-          "gov",
-          "help",
-          ".css",
-          "webmaster",
-          "sample",
-          "test",
-          "john@doe.com",
-          "x@y.com",
-          ".svg",
-          "customerservices",
-          "recruit",
-        ];
-      
-        const validEmails = [];
-        const invalidEmails = [];
-      
-        for (let email of emails) {
-          email = email.trim(); // remove whitespace
-          if (validator.validate(email) && !blacklist.includes(email)) {
-            validEmails.push(email);
-          } else {
-            invalidEmails.push(email);
-          }
-        }
-      
-        res.json({ validEmails, invalidEmails });
-    });
+    let emailList;
+    let emailListUplaodPath;
+
+    if (!req.file) {
+      console.log("No files were uploaded");
+      return res.status(400).send("No files were uploaded.");
+    }
+
+    emailList = req.file;
+    emailListUplaodPath = path.join(
+      __dirname,
+      "uploads",
+      emailList.originalname
+    );
+    fs.writeFileSync(emailListUplaodPath, emailList.buffer.toString());
+
+    const emails = fs
+      .readFileSync(emailListUplaodPath, { encoding: "utf8" })
+      .split("\n");
+    emails.shift();
+    emails.pop();
+
+    const blacklist = [
+      "domain",
+      "Job",
+      "feedback",
+      "google",
+      "helpdesk",
+      "donate",
+      "booking",
+      "subscribe",
+      "postmaster",
+      "ticket",
+      "police",
+      "enquiries",
+      "privacy",
+      "example",
+      "name",
+      "email",
+      ".png",
+      ".jpeg",
+      ".jpg",
+      ".gif",
+      "reception",
+      "communication",
+      "community",
+      "register",
+      ".life",
+      "firstname",
+      "lastname",
+      "customer.",
+      "customercare",
+      "wecare",
+      "customerservice",
+      "CustomerAssistance",
+      "NDW@MSN.com",
+      "editor",
+      "frontdesk",
+      "massage@gmail.com",
+      ".expert",
+      "hi@",
+      ".mx",
+      "police",
+      "mail@",
+      "questions",
+      "exam",
+      "information",
+      "webcam",
+      "license",
+      ".io",
+      "Wixpress",
+      "police",
+      ".site",
+      ".to",
+      ".make",
+      ".xyz",
+      ".gcb",
+      "hello",
+      ".studio",
+      "registra",
+      "sentry",
+      "reservation",
+      "%",
+      "e-mail",
+      "financial",
+      "bank",
+      "credit",
+      "card",
+      "auto",
+      "www.",
+      "answer",
+      ".info",
+      "enquiry",
+      "press",
+      "student",
+      "news",
+      "camera",
+      "secretariat",
+      "contribute",
+      "donate",
+      "boxoffice",
+      ".js",
+      "president",
+      "inquiries",
+      "member",
+      "gov",
+      "help",
+      ".css",
+      "webmaster",
+      "sample",
+      "test",
+      "john@doe.com",
+      "x@y.com",
+      ".svg",
+      "customerservices",
+      "recruit",
+    ];
+
+    const validEmails = [];
+    const invalidEmails = [];
+
+    for (let email of emails) {
+      email = email.trim(); // remove whitespace
+      if (validator.validate(email) && !blacklist.includes(email)) {
+        validEmails.push(email);
+      } else {
+        invalidEmails.push(email);
+      }
+    }
+
+    res.json({ validEmails, invalidEmails });
+  });
 };
 
-export { uploadFile,domainCountry,extractEmail,validateEmail };
+export { uploadFile, domainCountry, extractEmail, validateEmail };
