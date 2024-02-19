@@ -4,6 +4,7 @@ import fs from "fs";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
+const { createPool } = "puppeteer-pool";
 import puppeteer from "puppeteer";
 import validator from "email-validator";
 
@@ -44,149 +45,183 @@ const uploadFile = (req, res) => {
   });
 };
 
-const domainCountry = (req, res) => {
-  upload.single("domainList")(req, res, function (err) {
-    if (err) {
-      console.error(err);
-      return res.status(400).send("File upload error");
-    }
-    let domainList;
-    let domainListUplaodPath;
-    console.log("hI");
+const domainCountry= (req, res) => {
+  upload.single('domainList')(req, res, function (err) {
+      if (err) {
+          console.error(err);
+          return res.status(400).send("File upload error");
+      }
+  let domainList;
+  let domainListUplaodPath;
+  console.log("hI");
 
-    if (!req.file) {
-      console.log("No files were uploaded");
-      return res.status(400).send("No files were uploaded.");
-    }
-    console.log("hI");
+  if (!req.file) {
+    console.log("No files were uploaded");
+    return res.status(400).send("No files were uploaded.");
+  }
+  console.log("hI")
+  
+  domainList = req.file;
+  domainListUplaodPath = path.join(__dirname, 'uploads', domainList.originalname);
+  fs.writeFileSync(domainListUplaodPath, domainList.buffer.toString());
 
-    domainList = req.file;
-    domainListUplaodPath = path.join(
-      __dirname,
-      "uploads",
-      domainList.originalname
+  const domains = fs
+    .readFileSync(domainListUplaodPath, { encoding: "utf8" })
+    .split("\n")
+    .filter(
+      (domain) =>
+        ![
+          "blog",
+          "wordpress",
+          "gov",
+          "tumblr",
+          "multiply",
+          "tripod.com",
+          "org",
+          "ebay.com",
+          ".ac",
+          ".sh",
+          "church",
+          "typepad.com",
+          "tripadvisor.com",
+          ".hk",
+          ".pk",
+          "online",
+          "imdb.com",
+          "youtube.com",
+          ".tv",
+          "channel",
+          "news",
+          "press",
+          "apply",
+          "school",
+          "college",
+          "edu",
+          "javadevjournal.com",
+          ".in",
+          "facebook.com",
+          "twitter.com",
+          "pintrest",
+          "instragram",
+          "yellowpages.com",
+          "whitepages.com",
+          "walmart.com",
+          "expedia.com",
+          "media",
+          "groupon.com",
+          "telegraph",
+          "wayfair.com",
+          "nih.",
+          "apple.com",
+          "reddit.com",
+          "daily",
+          "today",
+          "cnet.com",
+          "glassdoor.com",
+          "target.com",
+          "yelp.com",
+          "indeed.com",
+          "justdial.com",
+          "ranker.com",
+          "customercare",
+          "domain",
+          "noreply",
+          "nobody",
+          "webmd.com",
+          "mapquest.com",
+          "glossier.com",
+          "fresh.com",
+          "manta.com",
+          "dailymail",
+          "weather.com",
+          "holiday",
+          "weleda.com",
+          "follain.com",
+          "agutsygirl.com",
+          "pcaskin.com",
+          "kiehls.com",
+          "cargurus.com",
+          "foursquare.com",
+          "animations.com",
+          "design",
+          "chron.com",
+          "people.com",
+          ".tech",
+          ".info",
+          "pcmag.com",
+          "google",
+        ].includes(domain.trim().toLowerCase())
     );
-    fs.writeFileSync(domainListUplaodPath, domainList.buffer.toString());
+  domains.shift();
+  domains.pop();
 
-    const domains = fs
-      .readFileSync(domainListUplaodPath, { encoding: "utf8" })
-      .split("\n")
-      .filter(
-        (domain) =>
-          ![
-            "blog",
-            "wordpress",
-            "gov",
-            "tumblr",
-            "multiply",
-            "tripod.com",
-            "org",
-            "ebay.com",
-            ".ac",
-            ".sh",
-            "church",
-            "typepad.com",
-            "tripadvisor.com",
-            ".hk",
-            ".pk",
-            "online",
-            "imdb.com",
-            "youtube.com",
-            ".tv",
-            "channel",
-            "news",
-            "press",
-            "apply",
-            "school",
-            "college",
-            "edu",
-            "javadevjournal.com",
-            ".in",
-            "facebook.com",
-            "twitter.com",
-            "pintrest",
-            "instragram",
-            "yellowpages.com",
-            "whitepages.com",
-            "walmart.com",
-            "expedia.com",
-            "media",
-            "groupon.com",
-            "telegraph",
-            "wayfair.com",
-            "nih.",
-            "apple.com",
-            "reddit.com",
-            "daily",
-            "today",
-            "cnet.com",
-            "glassdoor.com",
-            "target.com",
-            "yelp.com",
-            "indeed.com",
-            "justdial.com",
-            "ranker.com",
-            "customercare",
-            "domain",
-            "noreply",
-            "nobody",
-            "webmd.com",
-            "mapquest.com",
-            "glossier.com",
-            "fresh.com",
-            "manta.com",
-            "dailymail",
-            "weather.com",
-            "holiday",
-            "weleda.com",
-            "follain.com",
-            "agutsygirl.com",
-            "pcaskin.com",
-            "kiehls.com",
-            "cargurus.com",
-            "foursquare.com",
-            "animations.com",
-            "design",
-            "chron.com",
-            "people.com",
-            ".tech",
-            ".info",
-            "pcmag.com",
-            "google",
-          ].includes(domain.trim().toLowerCase())
-      );
-    domains.shift();
-    domains.pop();
+  const results = [];
 
-    const results = [];
-
-    const lookupPromise = (domain) => {
-      return new Promise((resolve, reject) => {
-        dns.lookup(domain, (err, address) => {
-          if (err) {
-            reject(err);
+  const lookupPromise = (domain) => {
+    return new Promise((resolve, reject) => {
+      dns.lookup(domain, (err, address) => {
+        if (err) {
+          reject(err);
+        } else {
+          const country = geoip.lookup(address)?.country;
+          if (country) {
+            resolve({ domain, country });
           } else {
-            const country = geoip.lookup(address)?.country;
-            if (country) {
-              resolve({ domain, country });
-            } else {
-              reject(`Error getting country name for domain ${domain}`);
-            }
+            reject(`Error getting country name for domain ${domain}`);
           }
-        });
+        }
       });
-    };
+    });
+  };
 
-    Promise.all(domains.map((domain) => lookupPromise(domain.trim())))
-      .then((results) => {
-        res.json(results);
-        // console.log(results);
-      })
-      .catch((err) => {
-        console.error(`Error verifying DNS: ${err}`);
-        res.status(500).send("Internal server error");
-      });
+  Promise.all(domains.map((domain) => lookupPromise(domain.trim())))
+    .then((results) => {
+      res.json(results);
+      // console.log(results);
+    })
+    .catch((err) => {
+      console.error(`Error verifying DNS: ${err}`);
+      res.status(500).send("Internal server error");
+    });
+  
   });
+}
+
+const AutodomainCountry = (req, res) => {
+  const { domains } = req.body;
+  console.log("domains",domains);
+
+  if (!domains || !Array.isArray(domains)) {
+    return res.status(400).send("Invalid input. Expected an array of domains.");
+  }
+
+  const results = [];
+
+  const lookupPromise = (domain) => {
+    return new Promise((resolve, reject) => {
+      dns.lookup(domain, (err, address) => {
+        if (err) {
+          reject(err);
+        } else {
+          const country = geoip.lookup(address)?.country;
+          if (country) {
+            resolve({ domain, country });
+          } else {
+            reject(`Error getting country name for domain ${domain}`);
+          }
+        }
+      });
+    });
+  };
+
+  Promise.all(domains.map((domain) => lookupPromise(domain.trim())))
+    .then((results) => {
+      res.json(results);
+    })
+    .catch((err) => {
+      console.error(`Error verifying DNS: ${err}`);
+      res.status(500).send("Internal server error");
+    });
 };
 
 const extractEmail = async (req, res) => {
@@ -205,84 +240,56 @@ const extractEmail = async (req, res) => {
     }
 
     domainList = req.file;
-    domainListUploadPath = path.join(
-      __dirname,
-      "uploads",
-      domainList.originalname + ".csv"
-    );
+    domainListUploadPath = path.join(__dirname, "uploads", domainList.originalname + ".csv");
     fs.writeFileSync(domainListUploadPath, domainList.buffer.toString());
 
-    const domains = fs
-      .readFileSync(domainListUploadPath, { encoding: "utf8" })
-      .split("\n");
+    const domains = fs.readFileSync(domainListUploadPath, { encoding: "utf8" }).split("\n");
     domains.shift();
     domains.pop();
     console.log(domains);
-    const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
-    const bannedWords = ["domain"];
 
-    let emailAddresses = {};
+    const emailAddresses = {};
 
-    let numResponsesReceived = 0;
-    const numDomains = domains.length;
+    const browser = await puppeteer.launch({ headless: "new" }); // Pass headless: "new"
 
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
+    try {
+      await Promise.all(domains.map(async (domain) => {
+        const url = `https://${domain.trim()}`;
 
-    for (let i = 0; i < numDomains; i++) {
-      const domain = domains[i];
-      console.log(domain);
-      const url = `https://${domain}`;
-
-      try {
-        await page.goto(url);
-        const pages = await browser.pages();
-        for (let j = 0; j < pages.length; j++) {
-          const page = pages[j];
-          const pageUrl = page.url();
-          const matches = await page.$$eval(
-            "a[href]",
-            (links, bannedWords) =>
-              links
-                .map((link) =>
-                  link.href.match(
-                    /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi
-                  )
-                )
-                .filter((matches) => matches !== null)
-                .flat()
-                .filter((match, index, self) => self.indexOf(match) === index)
-                .filter((match) => {
-                  for (let i = 0; i < bannedWords.length; i++) {
-                    if (match.includes(bannedWords[i])) {
-                      return false;
-                    }
-                  }
-                  return true;
-                }),
-            bannedWords
-          );
+        try {
+          const page = await browser.newPage();
+          await page.goto(url, { timeout: 60000 });
+          const matches = await page.$$eval("a[href]", (links) => {
+            const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi;
+            return links
+              .map((link) => link.href.match(emailRegex))
+              .filter((matches) => matches !== null)
+              .flat()
+              .filter((match, index, self) => self.indexOf(match) === index);
+          });
           if (matches && matches.length > 0) {
-            emailAddresses[pageUrl] = matches;
+            emailAddresses[url] = matches;
           }
+          await page.close();
+        } catch (error) {
+          console.error(`Error for ${url}: ${error.message}`);
         }
-      } catch (error) {
-        console.error(error);
-      }
+      }));
 
-      numResponsesReceived++;
-      if (numResponsesReceived === numDomains) {
-        await browser.close();
-        if (Object.keys(emailAddresses).length > 0) {
-          res.send(emailAddresses);
-          console.log(emailAddresses);
-        } else {
-          res.send("No email addresses found in the uploaded file.");
-        }
+      if (Object.keys(emailAddresses).length > 0) {
+        res.send(emailAddresses);
+        console.log(emailAddresses);
+      } else {
+        res.send("No email addresses found in the uploaded file.");
       }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      await browser.close();
     }
   });
 };
+
 
 const validateEmail = (req, res) => {
   upload.single("emailList")(req, res, function (err) {
@@ -425,4 +432,4 @@ const validateEmail = (req, res) => {
   });
 };
 
-export { uploadFile, domainCountry, extractEmail, validateEmail };
+export { uploadFile, domainCountry, extractEmail, validateEmail,AutodomainCountry };
