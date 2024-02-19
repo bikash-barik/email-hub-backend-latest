@@ -4,7 +4,6 @@ import fs from "fs";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
-const { createPool } = "puppeteer-pool";
 import puppeteer from "puppeteer";
 import validator from "email-validator";
 
